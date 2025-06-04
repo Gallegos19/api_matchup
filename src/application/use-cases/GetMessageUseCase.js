@@ -37,5 +37,5 @@ class GetMessagesUseCase {
   }
 }
 module.exports = {
-    GetMessagesUseCase
+  GetMessagesUseCase
 };

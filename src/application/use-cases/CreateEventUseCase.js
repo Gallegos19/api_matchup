@@ -1,3 +1,6 @@
+const { Event } = require('../../domain/entities/Event');
+const { v4: generateId } = require('uuid');
+
 class CreateEventUseCase {
   constructor(eventRepository, userRepository) {
     this.eventRepository = eventRepository;
@@ -20,12 +23,26 @@ class CreateEventUseCase {
       throw new Error('La fecha de fin debe ser posterior a la de inicio');
     }
 
-    // 3. Crear evento
+    // 3. Crear evento con ID generado
     const event = new Event({
-      id: generateId(),
+      id: generateId(), // ✅ AGREGAR ESTA LÍNEA
       creatorId: creatorId,
-      ...eventData,
-      campus: eventData.campus || creator.academicProfile.campus
+      title: eventData.title,
+      description: eventData.description,
+      eventType: eventData.eventType,
+      location: eventData.location,
+      campus: eventData.campus || creator.academicProfile?.campus,
+      startDate: eventData.startDate,
+      endDate: eventData.endDate,
+      maxParticipants: eventData.maxParticipants,
+      isPublic: eventData.isPublic,
+      requirements: eventData.requirements || [],
+      tags: eventData.tags || [],
+      imageUrl: eventData.imageUrl || null,
+      status: 'active',
+      currentParticipants: 0, // Inicializar en 0, luego se incrementa
+      createdAt: new Date(),
+      updatedAt: new Date()
     });
 
     // 4. Guardar evento

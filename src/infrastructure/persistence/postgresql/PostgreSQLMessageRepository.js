@@ -1,6 +1,9 @@
-const { IMessageRepository } = require('../../../domain/repositories/IMessageRepository');
-const { Message } = require('../../../domain/entities');
-const BaseRepository = require('./BaseRepository');
+// src/infrastructure/persistence/postgresql/PostgreSQLMessageRepository.js - CORREGIDO
+const {
+  IMessageRepository,
+} = require("../../../domain/repositories/IMessageRepository");
+const { Message } = require("../../../domain/entities");
+const BaseRepository = require("./BaseRepository");
 
 class PostgreSQLMessageRepository extends BaseRepository {
   constructor(database) {
@@ -9,7 +12,7 @@ class PostgreSQLMessageRepository extends BaseRepository {
 
   async save(message) {
     const messageRow = this.mapEntityToRow(message);
-    
+
     const query = `
       INSERT INTO messages (
         id, match_id, sender_id, receiver_id, content, message_type,
@@ -19,7 +22,7 @@ class PostgreSQLMessageRepository extends BaseRepository {
         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
       ) RETURNING *
     `;
-    
+
     const values = [
       messageRow.id,
       messageRow.match_id,
@@ -33,21 +36,21 @@ class PostgreSQLMessageRepository extends BaseRepository {
       messageRow.read_at,
       messageRow.delivered_at,
       messageRow.created_at,
-      messageRow.updated_at
+      messageRow.updated_at,
     ];
-    
+
     const result = await this.db.query(query, values);
     return this.mapRowToEntity(result.rows[0], Message);
   }
 
   async findById(id) {
-    const query = 'SELECT * FROM messages WHERE id = $1';
+    const query = "SELECT * FROM messages WHERE id = $1";
     const result = await this.db.query(query, [id]);
-    
+
     if (result.rows.length === 0) {
       return null;
     }
-    
+
     return this.mapRowToEntity(result.rows[0], Message);
   }
 
@@ -64,18 +67,20 @@ class PostgreSQLMessageRepository extends BaseRepository {
       ORDER BY m.created_at DESC
       LIMIT $2 OFFSET $3
     `;
-    
+
     const result = await this.db.query(query, [matchId, limit, offset]);
-    
-    return result.rows.map(row => {
-      const message = this.mapRowToEntity(row, Message);
-      message.senderInfo = {
-        firstName: row.sender_first_name,
-        lastName: row.sender_last_name,
-        photos: row.sender_photos
-      };
-      return message;
-    }).reverse(); // Invertir para mostrar del más antiguo al más reciente
+
+    return result.rows
+      .map((row) => {
+        const message = this.mapRowToEntity(row, Message);
+        message.senderInfo = {
+          firstName: row.sender_first_name,
+          lastName: row.sender_last_name,
+          photos: row.sender_photos,
+        };
+        return message;
+      })
+      .reverse(); // Invertir para mostrar del más antiguo al más reciente
   }
 
   async findUnreadMessages(userId) {
@@ -89,14 +94,14 @@ class PostgreSQLMessageRepository extends BaseRepository {
       WHERE m.receiver_id = $1 AND m.is_read = FALSE
       ORDER BY m.created_at DESC
     `;
-    
+
     const result = await this.db.query(query, [userId]);
-    
-    return result.rows.map(row => {
+
+    return result.rows.map((row) => {
       const message = this.mapRowToEntity(row, Message);
       message.senderInfo = {
         firstName: row.sender_first_name,
-        lastName: row.sender_last_name
+        lastName: row.sender_last_name,
       };
       return message;
     });
@@ -104,16 +109,19 @@ class PostgreSQLMessageRepository extends BaseRepository {
 
   async markAsRead(messageIds, userId) {
     if (messageIds.length === 0) return;
-    
-    const placeholders = messageIds.map((_, index) => `${index + 1}`).join(',');
+
+    // Corregir la generación de placeholders
+    const placeholders = messageIds
+      .map((_, index) => `$${index + 1}`)
+      .join(",");
     const query = `
-      UPDATE messages 
-      SET is_read = TRUE, read_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
-      WHERE id IN (${placeholders}) 
-        AND receiver_id = ${messageIds.length + 1}
-        AND is_read = FALSE
-    `;
-    
+    UPDATE messages 
+    SET is_read = TRUE, read_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+    WHERE id IN (${placeholders}) 
+      AND receiver_id = $${messageIds.length + 1}
+      AND is_read = FALSE
+  `;
+
     await this.db.query(query, [...messageIds, userId]);
   }
 
@@ -130,15 +138,15 @@ class PostgreSQLMessageRepository extends BaseRepository {
         AND m.created_at > $2
       ORDER BY m.created_at ASC
     `;
-    
+
     const result = await this.db.query(query, [matchId, timestamp]);
-    
-    return result.rows.map(row => {
+
+    return result.rows.map((row) => {
       const message = this.mapRowToEntity(row, Message);
       message.senderInfo = {
         firstName: row.sender_first_name,
         lastName: row.sender_last_name,
-        photos: row.sender_photos
+        photos: row.sender_photos,
       };
       return message;
     });
@@ -151,14 +159,95 @@ class PostgreSQLMessageRepository extends BaseRepository {
       ORDER BY created_at DESC 
       LIMIT 1
     `;
-    
+
     const result = await this.db.query(query, [matchId]);
-    
+
     if (result.rows.length === 0) {
       return null;
     }
-    
+
+    return this.mapRowToEntity(result.rows[0], Message);
+  }
+
+  // ✅ MÉTODO FALTANTE - Actualizar mensaje
+  async update(id, messageData) {
+    const messageRow = this.mapEntityToRow(messageData);
+
+    const updateFields = [];
+    const updateValues = [];
+    let paramCount = 1;
+
+    for (const [key, value] of Object.entries(messageRow)) {
+      if (key !== "id" && value !== undefined) {
+        updateFields.push(`${key} = $${paramCount}`);
+        updateValues.push(value);
+        paramCount++;
+      }
+    }
+
+    if (updateFields.length === 0) {
+      throw new Error("No hay campos para actualizar");
+    }
+
+    updateFields.push(`updated_at = $${paramCount}`);
+    updateValues.push(new Date());
+    updateValues.push(id);
+
+    const query = `
+      UPDATE messages 
+      SET ${updateFields.join(", ")}
+      WHERE id = $${paramCount + 1}
+      RETURNING *
+    `;
+
+    const result = await this.db.query(query, updateValues);
+
+    if (result.rows.length === 0) {
+      return null;
+    }
+
+    return this.mapRowToEntity(result.rows[0], Message);
+  }
+
+  // ✅ MÉTODO ADICIONAL - Actualizar solo campos específicos
+  async markAsDelivered(messageId) {
+    const query = `
+      UPDATE messages 
+      SET is_delivered = TRUE, 
+          delivered_at = CURRENT_TIMESTAMP, 
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1
+      RETURNING *
+    `;
+
+    const result = await this.db.query(query, [messageId]);
+
+    if (result.rows.length === 0) {
+      return null;
+    }
+
+    return this.mapRowToEntity(result.rows[0], Message);
+  }
+
+  // ✅ MÉTODO ADICIONAL - Marcar mensaje específico como leído
+  async markMessageAsRead(messageId, userId) {
+    const query = `
+      UPDATE messages 
+      SET is_read = TRUE, 
+          read_at = CURRENT_TIMESTAMP, 
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1 AND receiver_id = $2 AND is_read = FALSE
+      RETURNING *
+    `;
+
+    const result = await this.db.query(query, [messageId, userId]);
+
+    if (result.rows.length === 0) {
+      return null;
+    }
+
     return this.mapRowToEntity(result.rows[0], Message);
   }
 }
+
 module.exports = PostgreSQLMessageRepository;

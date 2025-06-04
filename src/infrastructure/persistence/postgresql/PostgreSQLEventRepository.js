@@ -1,5 +1,6 @@
+// src/infrastructure/persistence/postgresql/PostgreSQLEventRepository.js - CON DEBUG
 const { IEventRepository } = require('../../../domain/repositories/IEventRepository');
-const { Event } = require('../../../domain/entities');
+const { Event } = require('../../../domain/entities/Event');
 const BaseRepository = require('./BaseRepository');
 
 class PostgreSQLEventRepository extends BaseRepository {
@@ -8,7 +9,10 @@ class PostgreSQLEventRepository extends BaseRepository {
   }
 
   async save(event) {
+    console.log('🔍 Datos del evento recibidos en save:', event);
+    
     const eventRow = this.mapEntityToRow(event);
+    console.log('🔍 Datos mapeados para DB:', eventRow);
     
     const query = `
       INSERT INTO events (
@@ -40,6 +44,8 @@ class PostgreSQLEventRepository extends BaseRepository {
       eventRow.created_at,
       eventRow.updated_at
     ];
+    
+    console.log('🔍 Valores para la query:', values);
     
     const result = await this.db.query(query, values);
     return this.mapRowToEntity(result.rows[0], Event);
@@ -86,19 +92,19 @@ class PostgreSQLEventRepository extends BaseRepository {
     let paramCount = 2;
     
     if (filters.eventType) {
-      query += ` AND e.event_type = ${paramCount}`;
+      query += ` AND e.event_type = $${paramCount}`;
       values.push(filters.eventType);
       paramCount++;
     }
     
     if (filters.startDate) {
-      query += ` AND e.start_date >= ${paramCount}`;
+      query += ` AND e.start_date >= $${paramCount}`;
       values.push(filters.startDate);
       paramCount++;
     }
     
     if (filters.isPublic !== undefined) {
-      query += ` AND e.is_public = ${paramCount}`;
+      query += ` AND e.is_public = $${paramCount}`;
       values.push(filters.isPublic);
       paramCount++;
     }
@@ -106,7 +112,7 @@ class PostgreSQLEventRepository extends BaseRepository {
     query += ' ORDER BY e.start_date ASC';
     
     if (filters.limit) {
-      query += ` LIMIT ${paramCount}`;
+      query += ` LIMIT $${paramCount}`;
       values.push(filters.limit);
     }
     
@@ -176,7 +182,7 @@ class PostgreSQLEventRepository extends BaseRepository {
     
     for (const [key, value] of Object.entries(eventRow)) {
       if (key !== 'id' && value !== undefined) {
-        updateFields.push(`${key} = ${paramCount}`);
+        updateFields.push(`${key} = $${paramCount}`);
         updateValues.push(value);
         paramCount++;
       }
@@ -186,14 +192,14 @@ class PostgreSQLEventRepository extends BaseRepository {
       throw new Error('No hay campos para actualizar');
     }
     
-    updateFields.push(`updated_at = ${paramCount}`);
+    updateFields.push(`updated_at = $${paramCount}`);
     updateValues.push(new Date());
     updateValues.push(id);
     
     const query = `
       UPDATE events 
       SET ${updateFields.join(', ')}
-      WHERE id = ${paramCount + 1}
+      WHERE id = $${paramCount + 1}
       RETURNING *
     `;
     

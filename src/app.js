@@ -1,3 +1,4 @@
+// src/app.js - ACTUALIZADO
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -27,7 +28,7 @@ const createApp = async () => {
   app.use(cors({
     origin: config.ALLOWED_ORIGINS || ['http://localhost:3000'],
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization']
   }));
 
@@ -67,6 +68,8 @@ const createApp = async () => {
   const createUserRoutes = require('./interfaces/http/routes/userRoutes');
   const createMatchRoutes = require('./interfaces/http/routes/matchRoutes');
   const createChatRoutes = require('./interfaces/http/routes/chatRoutes');
+  const createEventRoutes = require('./interfaces/http/routes/eventRoutes');
+  const createStudyGroupRoutes = require('./interfaces/http/routes/studyGroupRoutes');
 
   // Verificar que las funciones estén disponibles
   console.log('🔍 Verificando rutas:');
@@ -74,8 +77,10 @@ const createApp = async () => {
   console.log('   - User routes:', typeof createUserRoutes);
   console.log('   - Match routes:', typeof createMatchRoutes);
   console.log('   - Chat routes:', typeof createChatRoutes);
+  console.log('   - Event routes:', typeof createEventRoutes);
+  console.log('   - Study Group routes:', typeof createStudyGroupRoutes);
 
-  // Configurar rutas
+  // Configurar rutas de autenticación
   try {
     app.use('/api/v1/auth', createAuthRoutes(dependencies));
     console.log('✅ Rutas de auth configuradas');
@@ -84,6 +89,7 @@ const createApp = async () => {
     throw error;
   }
 
+  // Configurar rutas de usuarios
   try {
     app.use('/api/v1/users', createUserRoutes(dependencies));
     console.log('✅ Rutas de users configuradas');
@@ -92,6 +98,7 @@ const createApp = async () => {
     throw error;
   }
 
+  // Configurar rutas de matches
   try {
     app.use('/api/v1/matches', createMatchRoutes(dependencies));
     console.log('✅ Rutas de matches configuradas');
@@ -100,6 +107,7 @@ const createApp = async () => {
     throw error;
   }
 
+  // Configurar rutas de chat
   try {
     app.use('/api/v1/chat', createChatRoutes(dependencies));
     console.log('✅ Rutas de chat configuradas');
@@ -108,7 +116,25 @@ const createApp = async () => {
     throw error;
   }
 
-  // Documentación básica
+  // Configurar rutas de eventos
+  try {
+    app.use('/api/v1/events', createEventRoutes(dependencies));
+    console.log('✅ Rutas de events configuradas');
+  } catch (error) {
+    console.error('❌ Error configurando rutas de events:', error);
+    throw error;
+  }
+
+  // Configurar rutas de grupos de estudio
+  try {
+    app.use('/api/v1/study-groups', createStudyGroupRoutes(dependencies));
+    console.log('✅ Rutas de study-groups configuradas');
+  } catch (error) {
+    console.error('❌ Error configurando rutas de study-groups:', error);
+    throw error;
+  }
+
+  // Documentación API actualizada
   app.get('/api/v1/docs', (req, res) => {
     res.json({
       success: true,
@@ -120,17 +146,80 @@ const createApp = async () => {
           'POST /auth/register': 'Registrar nuevo usuario',
           'POST /auth/login': 'Iniciar sesión',
           'GET /auth/verify-email/:token': 'Verificar email',
-          'POST /auth/refresh-token': 'Renovar token'
+          'POST /auth/refresh-token': 'Renovar token',
+          'POST /auth/resend-verification': 'Reenviar verificación de email'
         },
         users: {
-          'GET /users/profile': 'Obtener perfil del usuario (próximamente)'
+          'GET /users/profile': 'Obtener perfil del usuario',
+          'PUT /users/profile': 'Actualizar perfil',
+          'POST /users/photos': 'Subir fotos',
+          'DELETE /users/photos/:photoId': 'Eliminar foto',
+          'GET /users/search': 'Buscar usuarios'
         },
         matches: {
-          'GET /matches/potential': 'Obtener matches potenciales (próximamente)'
+          'GET /matches/potential': 'Obtener matches potenciales',
+          'POST /matches': 'Crear match (like/dislike)',
+          'GET /matches': 'Obtener mis matches',
+          'DELETE /matches/:matchId': 'Deshacer match',
+          'GET /matches/statistics': 'Estadísticas de matches'
         },
         chat: {
-          'GET /chat/conversations': 'Obtener conversaciones (próximamente)'
+          'GET /chat/conversations': 'Obtener conversaciones',
+          'GET /chat/:matchId/messages': 'Obtener mensajes',
+          'POST /chat/:matchId/messages': 'Enviar mensaje',
+          'GET /chat/:matchId/messages/poll': 'Long polling para nuevos mensajes',
+          'PATCH /chat/:matchId/messages/read': 'Marcar mensajes como leídos',
+          'PATCH /chat/:matchId/messages/read-all': 'Marcar todos como leídos',
+          'GET /chat/unread-count': 'Conteo de mensajes no leídos',
+          'POST /chat/:matchId/study-invitation': 'Enviar invitación de estudio',
+          'PATCH /chat/messages/:messageId/study-response': 'Responder invitación'
+        },
+        events: {
+          'POST /events': 'Crear evento',
+          'GET /events': 'Obtener eventos',
+          'GET /events/my-events': 'Mis eventos',
+          'GET /events/:eventId': 'Obtener evento específico',
+          'POST /events/:eventId/join': 'Unirse a evento',
+          'DELETE /events/:eventId/leave': 'Salir de evento',
+          'PUT /events/:eventId': 'Actualizar evento',
+          'PATCH /events/:eventId/cancel': 'Cancelar evento'
+        },
+        studyGroups: {
+          'POST /study-groups': 'Crear grupo de estudio',
+          'GET /study-groups': 'Obtener grupos de estudio',
+          'GET /study-groups/search': 'Buscar grupos',
+          'GET /study-groups/popular-subjects': 'Materias populares',
+          'GET /study-groups/my-groups': 'Mis grupos',
+          'GET /study-groups/:groupId': 'Obtener grupo específico',
+          'POST /study-groups/:groupId/join': 'Unirse a grupo',
+          'DELETE /study-groups/:groupId/leave': 'Salir de grupo',
+          'GET /study-groups/:groupId/members': 'Miembros del grupo',
+          'PUT /study-groups/:groupId': 'Actualizar grupo',
+          'DELETE /study-groups/:groupId': 'Eliminar grupo'
         }
+      },
+      features: {
+        implemented: [
+          '✅ Sistema de autenticación JWT',
+          '✅ Matching algorítmico por compatibilidad académica',
+          '✅ Chat en tiempo real con long polling',
+          '✅ Gestión de eventos universitarios',
+          '✅ Grupos de estudio colaborativos',
+          '✅ Invitaciones de estudio',
+          '✅ Sistema de notificaciones',
+          '✅ Validación de emails universitarios',
+          '✅ Rate limiting y seguridad',
+          '✅ Subida de fotos (Cloudinary)',
+          '✅ Base de datos PostgreSQL optimizada'
+        ],
+        upcoming: [
+          '🔄 Push notifications reales',
+          '🔄 WebSocket para chat en tiempo real',
+          '🔄 Sistema de reportes',
+          '🔄 Recomendaciones AI-powered',
+          '🔄 Integración con calendario académico',
+          '🔄 Gamificación y logros'
+        ]
       }
     });
   });
@@ -141,7 +230,8 @@ const createApp = async () => {
       success: false,
       error: 'Endpoint no encontrado',
       path: req.originalUrl,
-      method: req.method
+      method: req.method,
+      availableEndpoints: '/api/v1/docs'
     });
   });
 

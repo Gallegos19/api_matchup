@@ -145,6 +145,77 @@ const messageSchemas = {
     metadata: Joi.object().default({})
   })
 };
+const eventSchemas = {
+  createEvent: Joi.object({
+    title: Joi.string().min(3).max(200).required(),
+    description: Joi.string().max(1000),
+    eventType: Joi.string().valid('social', 'academic', 'sports', 'cultural').default('social'),
+    location: Joi.string().max(200),
+    campus: Joi.string().valid('Tuxtla Gutiérrez', 'Suchiapa', 'Villa Corzo', 'Catazajá'),
+    startDate: Joi.date().greater('now').required(),
+    endDate: Joi.date().greater(Joi.ref('startDate')).required(),
+    maxParticipants: Joi.number().integer().min(2).max(1000),
+    isPublic: Joi.boolean().default(true),
+    requirements: Joi.array().items(Joi.object({
+      type: Joi.string().valid('career', 'semester', 'gpa'),
+      values: Joi.array().items(Joi.string()),
+      minSemester: Joi.number().integer().min(1).max(12),
+      minGpa: Joi.number().min(0).max(4.0)
+    })).default([]),
+    tags: Joi.array().items(Joi.string().max(50)).max(10).default([])
+  }),
+
+  updateEvent: Joi.object({
+    title: Joi.string().min(3).max(200),
+    description: Joi.string().max(1000),
+    location: Joi.string().max(200),
+    startDate: Joi.date().greater('now'),
+    endDate: Joi.date(),
+    maxParticipants: Joi.number().integer().min(2).max(1000),
+    isPublic: Joi.boolean(),
+    requirements: Joi.array().items(Joi.object({
+      type: Joi.string().valid('career', 'semester', 'gpa'),
+      values: Joi.array().items(Joi.string()),
+      minSemester: Joi.number().integer().min(1).max(12),
+      minGpa: Joi.number().min(0).max(4.0)
+    })),
+    tags: Joi.array().items(Joi.string().max(50)).max(10)
+  })
+};
+
+const studyGroupSchemas = {
+  createStudyGroup: Joi.object({
+    name: Joi.string().min(3).max(200).required(),
+    description: Joi.string().max(1000),
+    subject: Joi.string().min(2).max(100).required(),
+    career: Joi.string().max(100),
+    semester: Joi.number().integer().min(1).max(12),
+    campus: Joi.string().valid('Tuxtla Gutiérrez', 'Suchiapa', 'Villa Corzo', 'Catazajá'),
+    maxMembers: Joi.number().integer().min(2).max(50).default(10),
+    studySchedule: Joi.object().default({}),
+    isPrivate: Joi.boolean().default(false),
+    requirements: Joi.array().items(Joi.object({
+      type: Joi.string().valid('career', 'semester', 'gpa'),
+      values: Joi.array().items(Joi.string()),
+      minSemester: Joi.number().integer().min(1).max(12),
+      minGpa: Joi.number().min(0).max(4.0)
+    })).default([])
+  }),
+
+  updateStudyGroup: Joi.object({
+    name: Joi.string().min(3).max(200),
+    description: Joi.string().max(1000),
+    studySchedule: Joi.object(),
+    maxMembers: Joi.number().integer().min(2).max(50),
+    isPrivate: Joi.boolean(),
+    requirements: Joi.array().items(Joi.object({
+      type: Joi.string().valid('career', 'semester', 'gpa'),
+      values: Joi.array().items(Joi.string()),
+      minSemester: Joi.number().integer().min(1).max(12),
+      minGpa: Joi.number().min(0).max(4.0)
+    }))
+  })
+};
 
 // src/interfaces/http/middleware/errorHandler.js
 const errorHandler = (err, req, res, next) => {
@@ -224,6 +295,8 @@ module.exports = {
   userSchemas,
   matchSchemas,
   messageSchemas,
+  eventSchemas,
+  studyGroupSchemas,
   errorHandler,
   rateLimiters
 };

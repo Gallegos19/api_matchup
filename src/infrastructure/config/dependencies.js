@@ -1,3 +1,4 @@
+// src/infrastructure/config/dependencies.js - ACTUALIZADO
 const Database = require('../persistence/database');
 
 const setupDependencies = async () => {
@@ -8,6 +9,8 @@ const setupDependencies = async () => {
     const PostgreSQLUserRepository = require('../persistence/postgresql/PostgreSQLUserRepository');
     const PostgreSQLMatchRepository = require('../persistence/postgresql/PostgreSQLMatchRepository');
     const PostgreSQLMessageRepository = require('../persistence/postgresql/PostgreSQLMessageRepository');
+    const { PostgreSQLEventRepository } = require('../persistence/postgresql/PostgreSQLEventRepository');
+    const PostgreSQLStudyGroupRepository = require('../persistence/postgresql/PostgreSQLStudyGroupRepository');
 
     // Importar servicios
     const JwtService = require('../security/JwtService');
@@ -30,6 +33,8 @@ const setupDependencies = async () => {
     const userRepository = new PostgreSQLUserRepository(Database);
     const matchRepository = new PostgreSQLMatchRepository(Database);
     const messageRepository = new PostgreSQLMessageRepository(Database);
+    const eventRepository = new PostgreSQLEventRepository(Database);
+    const studyGroupRepository = new PostgreSQLStudyGroupRepository(Database);
 
     console.log('✅ Dependencias configuradas correctamente');
 
@@ -38,6 +43,8 @@ const setupDependencies = async () => {
       userRepository,
       matchRepository,
       messageRepository,
+      eventRepository,
+      studyGroupRepository,
       jwtService,
       emailService,
       fileUploadService,
